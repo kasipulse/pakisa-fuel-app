@@ -1,116 +1,100 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Digital Fuel Voucher System</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pakisa Fuel Voucher</title>
   <script src="https://unpkg.com/@supabase/supabase-js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 30px;
+      background: #f5f5f5;
+    }
+    h1 {
+      color: #072760;
+    }
+    form {
+      background: white;
+      padding: 20px;
+      border-radius: 6px;
+      max-width: 400px;
+    }
+    label {
+      display: block;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    select, input, button {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+    }
+    button {
+      background: #0F99DA;
+      color: white;
+      border: none;
+      cursor: pointer;
+      margin-top: 15px;
+    }
+    button:hover {
+      background: #072760;
+    }
+  </style>
 </head>
 <body>
-  <h2>Digital Fuel Voucher System</h2>
-
+  <h1>Pakisa Fuel Voucher</h1>
   <form id="voucherForm">
+    <!-- Driver Selection -->
     <label for="driver">Driver:</label>
-    <select id="driver" required></select><br><br>
+    <select id="driver" name="driver" required>
+      <option value="">Mpho Mahlaba (+27658177124)</option>
+    </select>
 
+    <!-- Vehicle Selection -->
     <label for="vehicle">Vehicle:</label>
-    <select id="vehicle" required></select><br><br>
+    <select id="vehicle" name="vehicle" required>
+      <option value="VFR558GP">VFR558GP</option>
+    </select>
 
-    <label for="amount">Amount (R):</label>
-    <input type="number" id="amount" required><br><br>
+    <!-- Amount -->
+    <label for="amount">Fuel Amount (R):</label>
+    <input type="number" id="amount" name="amount" required min="50" />
 
-    <button type="submit">Create Voucher</button>
+    <button type="submit">Send Voucher</button>
   </form>
 
-  <h3>Existing Vouchers</h3>
-  <div id="voucherList">Loading vouchers...</div>
+  <p id="status"></p>
 
   <script>
-    const supabaseUrl = "https://sfvoptdderulwrpdywmb.supabase.co";
-    const supabaseKey = "YOUR_ANON_KEY"; // Replace with your real anon key
-    const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+    // Supabase setup
+    const SUPABASE_URL = "https://sfvoptdderulwrpdywmb.supabase.co";
+    const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY"; // replace with yours
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    async function loadDropdowns() {
-      // Load drivers
-      let { data: drivers, error: driverError } = await supabaseClient
-        .from("drivers")
-        .select("id, name, phone_number");
-
-      if (driverError) {
-        console.error(driverError);
-      } else {
-        const driverSelect = document.getElementById("driver");
-        driverSelect.innerHTML = "";
-        drivers.forEach((d) => {
-          let option = document.createElement("option");
-          option.value = d.id;
-          option.text = `${d.name} (${d.phone_number})`;
-          driverSelect.appendChild(option);
-        });
-      }
-
-      // Load vehicles
-      let { data: vehicles, error: vehicleError } = await supabaseClient
-        .from("vehicles")
-        .select("id, reg_number");
-
-      if (vehicleError) {
-        console.error(vehicleError);
-      } else {
-        const vehicleSelect = document.getElementById("vehicle");
-        vehicleSelect.innerHTML = "";
-        vehicles.forEach((v) => {
-          let option = document.createElement("option");
-          option.value = v.id;
-          option.text = v.reg_number;
-          vehicleSelect.appendChild(option);
-        });
-      }
-    }
-
-    async function loadVouchers() {
-      let { data: vouchers, error } = await supabaseClient
-        .from("fuel_vouchers")
-        .select("id, amount_rand, created_at, drivers(name), vehicles(reg_number)")
-        .order("created_at", { ascending: false });
-
-      const voucherList = document.getElementById("voucherList");
-      if (error) {
-        console.error(error);
-        voucherList.innerHTML = "Error loading vouchers.";
-        return;
-      }
-
-      if (vouchers.length === 0) {
-        voucherList.innerHTML = "No vouchers yet.";
-        return;
-      }
-
-      voucherList.innerHTML = "<ul>" + vouchers.map(
-        v => `<li>Driver: ${v.drivers?.name}, Vehicle: ${v.vehicles?.reg_number}, Amount: R${v.amount_rand}, Date: ${new Date(v.created_at).toLocaleString()}</li>`
-      ).join("") + "</ul>";
-    }
-
+    // Form submit
     document.getElementById("voucherForm").addEventListener("submit", async (e) => {
       e.preventDefault();
       const driver = document.getElementById("driver").value;
       const vehicle = document.getElementById("vehicle").value;
-      const amount = document.getElementById("amount").value;
+      const amount = parseFloat(document.getElementById("amount").value);
 
-      const { error } = await supabaseClient.from("fuel_vouchers").insert([
+      if (!driver || !vehicle || !amount) {
+        document.getElementById("status").innerText = "Please fill all fields.";
+        return;
+      }
+
+      const { error } = await supabase.from("fuel_vouchers").insert([
         { driver_id: driver, vehicle_id: vehicle, amount_rand: amount }
       ]);
 
       if (error) {
-        alert("Error creating voucher: " + error.message);
+        document.getElementById("status").innerText = "Error: " + error.message;
       } else {
-        alert("Voucher created!");
-        loadVouchers();
+        document.getElementById("status").innerText = "✅ Voucher created successfully!";
+        document.getElementById("voucherForm").reset();
       }
     });
-
-    loadDropdowns();
-    loadVouchers();
   </script>
 </body>
 </html>
