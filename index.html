@@ -40,6 +40,10 @@
     button:hover {
       background: #072760;
     }
+    #status {
+      margin-top: 15px;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
@@ -68,18 +72,19 @@
 
   <script>
     // Supabase setup
-    const SUPABASE_URL = "https://sfvoptdderulwrpdywmb.supabase.co"; // replace with yours
-    const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY"; // replace with yours
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const SUPABASE_URL = "https://sfvoptdderulwrpdywmb.supabase.co"; 
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmdm9wdGRkZXJ1bHdycGR5d21iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxNzY4NjAsImV4cCI6MjA3Mzc1Mjg2MH0.bHy_aZ9TOGLfanG6-xNb3HykxwpWAiUNOcfBbvN-OME"; 
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     async function loadDriversAndVehicles() {
       // Load drivers
-      const { data: drivers, error: driversError } = await supabase.from("drivers").select("*");
+      const { data: drivers, error: driversError } = await supabaseClient.from("drivers").select("*");
       const driverSelect = document.getElementById("driver");
       driverSelect.innerHTML = ""; 
 
       if (driversError || !drivers || drivers.length === 0) {
-        driverSelect.innerHTML = `<option value="">No drivers found. Please add one in Supabase.</option>`;
+        driverSelect.innerHTML = `<option value="">⚠️ No drivers found. Add in Supabase.</option>`;
+        console.error("Drivers error:", driversError);
       } else {
         drivers.forEach(d => {
           const option = document.createElement("option");
@@ -90,12 +95,13 @@
       }
 
       // Load vehicles
-      const { data: vehicles, error: vehiclesError } = await supabase.from("vehicles").select("*");
+      const { data: vehicles, error: vehiclesError } = await supabaseClient.from("vehicles").select("*");
       const vehicleSelect = document.getElementById("vehicle");
       vehicleSelect.innerHTML = ""; 
 
       if (vehiclesError || !vehicles || vehicles.length === 0) {
-        vehicleSelect.innerHTML = `<option value="">No vehicles found. Please add one in Supabase.</option>`;
+        vehicleSelect.innerHTML = `<option value="">⚠️ No vehicles found. Add in Supabase.</option>`;
+        console.error("Vehicles error:", vehiclesError);
       } else {
         vehicles.forEach(v => {
           const option = document.createElement("option");
@@ -118,15 +124,17 @@
         return;
       }
 
-      const { error } = await supabase.from("fuel_vouchers").insert([
+      const { error } = await supabaseClient.from("fuel_vouchers").insert([
         { driver_id: driver, vehicle_id: vehicle, amount }
       ]);
 
       if (error) {
-        document.getElementById("status").innerText = "Error: " + error.message;
+        document.getElementById("status").innerText = "❌ Error: " + error.message;
+        console.error("Insert error:", error);
       } else {
         document.getElementById("status").innerText = "✅ Voucher created successfully!";
         document.getElementById("voucherForm").reset();
+        loadDriversAndVehicles(); // reload to reflect updates
       }
     });
 
