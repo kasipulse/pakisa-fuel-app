@@ -73,7 +73,7 @@
   <script>
     // Supabase setup
     const SUPABASE_URL = "https://sfvoptdderulwrpdywmb.supabase.co"; 
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmdm9wdGRkZXJ1bHdycGR5d21iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxNzY4NjAsImV4cCI6MjA3Mzc1Mjg2MH0.bHy_aZ9TOGLfanG6-xNb3HykxwpWAiUNOcfBbvN-OME"; 
+    const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY"; 
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     async function loadDriversAndVehicles() {
@@ -124,8 +124,9 @@
         return;
       }
 
+      // ✅ Use amount_rand column
       const { error } = await supabaseClient.from("fuel_vouchers").insert([
-        { driver_id: driver, vehicle_id: vehicle, amount }
+        { driver_id: driver, vehicle_id: vehicle, amount_rand: amount }
       ]);
 
       if (error) {
@@ -134,7 +135,7 @@
       } else {
         document.getElementById("status").innerText = "✅ Voucher created successfully!";
         document.getElementById("voucherForm").reset();
-        loadDriversAndVehicles(); // reload to reflect updates
+        loadDriversAndVehicles();
       }
     });
 
