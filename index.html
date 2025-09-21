@@ -78,7 +78,10 @@
 
     async function loadDriversAndVehicles() {
       // Load drivers
-      const { data: drivers, error: driversError } = await supabaseClient.from("drivers").select("*");
+      const { data: drivers, error: driversError } = await supabaseClient
+        .from("drivers")
+        .select("*");
+
       const driverSelect = document.getElementById("driver");
       driverSelect.innerHTML = ""; 
 
@@ -89,13 +92,21 @@
         drivers.forEach(d => {
           const option = document.createElement("option");
           option.value = d.id;
-          option.textContent = `${d.name} (${d.phone})`;
+
+          // ✅ Handle different column names
+          const driverName = d.name || d.full_name || "Unknown Driver";
+          const driverPhone = d.phone || d.phone_number || "";
+
+          option.textContent = `${driverName}${driverPhone ? " (" + driverPhone + ")" : ""}`;
           driverSelect.appendChild(option);
         });
       }
 
       // Load vehicles
-      const { data: vehicles, error: vehiclesError } = await supabaseClient.from("vehicles").select("*");
+      const { data: vehicles, error: vehiclesError } = await supabaseClient
+        .from("vehicles")
+        .select("*");
+
       const vehicleSelect = document.getElementById("vehicle");
       vehicleSelect.innerHTML = ""; 
 
@@ -106,7 +117,7 @@
         vehicles.forEach(v => {
           const option = document.createElement("option");
           option.value = v.id;
-          option.textContent = v.reg_number;
+          option.textContent = v.reg_number || v.registration || "Unknown Vehicle";
           vehicleSelect.appendChild(option);
         });
       }
@@ -135,7 +146,7 @@
       } else {
         document.getElementById("status").innerText = "✅ Voucher created successfully!";
         document.getElementById("voucherForm").reset();
-        loadDriversAndVehicles();
+        loadDriversAndVehicles(); // reload lists
       }
     });
 
