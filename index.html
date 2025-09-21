@@ -73,51 +73,42 @@
   <script>
     // Supabase setup
     const SUPABASE_URL = "https://sfvoptdderulwrpdywmb.supabase.co"; 
-    const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY"; 
+    const SUPABASE_ANON_KEY = "PASTE_YOUR_REAL_ANON_KEY_HERE"; 
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     async function loadDriversAndVehicles() {
       // Load drivers
-      const { data: drivers, error: driversError } = await supabaseClient
-        .from("drivers")
-        .select("*");
+      const { data: drivers, error: driversError } = await supabaseClient.from("drivers").select("*");
+      console.log("Drivers response:", drivers, driversError);
 
       const driverSelect = document.getElementById("driver");
       driverSelect.innerHTML = ""; 
 
       if (driversError || !drivers || drivers.length === 0) {
         driverSelect.innerHTML = `<option value="">⚠️ No drivers found. Add in Supabase.</option>`;
-        console.error("Drivers error:", driversError);
       } else {
         drivers.forEach(d => {
           const option = document.createElement("option");
           option.value = d.id;
-
-          // ✅ Handle different column names
-          const driverName = d.name || d.full_name || "Unknown Driver";
-          const driverPhone = d.phone || d.phone_number || "";
-
-          option.textContent = `${driverName}${driverPhone ? " (" + driverPhone + ")" : ""}`;
+          option.textContent = `${d.name} (${d.phone})`;
           driverSelect.appendChild(option);
         });
       }
 
       // Load vehicles
-      const { data: vehicles, error: vehiclesError } = await supabaseClient
-        .from("vehicles")
-        .select("*");
+      const { data: vehicles, error: vehiclesError } = await supabaseClient.from("vehicles").select("*");
+      console.log("Vehicles response:", vehicles, vehiclesError);
 
       const vehicleSelect = document.getElementById("vehicle");
       vehicleSelect.innerHTML = ""; 
 
       if (vehiclesError || !vehicles || vehicles.length === 0) {
         vehicleSelect.innerHTML = `<option value="">⚠️ No vehicles found. Add in Supabase.</option>`;
-        console.error("Vehicles error:", vehiclesError);
       } else {
         vehicles.forEach(v => {
           const option = document.createElement("option");
           option.value = v.id;
-          option.textContent = v.reg_number || v.registration || "Unknown Vehicle";
+          option.textContent = v.reg_number;
           vehicleSelect.appendChild(option);
         });
       }
@@ -135,7 +126,7 @@
         return;
       }
 
-      // ✅ Use amount_rand column
+      // ✅ Insert with amount_rand
       const { error } = await supabaseClient.from("fuel_vouchers").insert([
         { driver_id: driver, vehicle_id: vehicle, amount_rand: amount }
       ]);
@@ -146,7 +137,7 @@
       } else {
         document.getElementById("status").innerText = "✅ Voucher created successfully!";
         document.getElementById("voucherForm").reset();
-        loadDriversAndVehicles(); // reload lists
+        loadDriversAndVehicles();
       }
     });
 
