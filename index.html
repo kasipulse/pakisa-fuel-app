@@ -1,52 +1,103 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Drivers</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Pakisa — Drivers Test</title>
+  <script src="https://unpkg.com/@supabase/supabase-js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 24px; background:#f5f6f8; }
+    .card { background:white; padding:16px; border-radius:8px; max-width:700px; box-shadow:0 6px 18px rgba(0,0,0,0.06); }
+    pre { white-space:pre-wrap; word-break:break-word; background:#f0f3f6; padding:10px; border-radius:6px; }
+    .ok { color:green } .err { color:red }
+  </style>
 </head>
 <body>
-  <h1>Driver List</h1>
-  <div id="driver-list">Loading...</div>
+  <div class="card">
+    <h2>Pakisa — Drivers + Vehicles debug</h2>
+    <p id="status">Status: <span id="status-text">starting…</span></p>
 
-  <script type="module">
-    import { createClient } from 'https://esm.sh/@supabase/supabase-js'
+    <h3>Drivers (fetched):</h3>
+    <div id="drivers-area"><em>loading…</em></div>
 
-    // 🔑 Replace these with your own Supabase details
-    const supabaseUrl = "https://YOUR_PROJECT_ID.supabase.co"
-    const supabaseKey = "YOUR_ANON_KEY"
-    const supabase = createClient(supabaseUrl, supabaseKey)
+    <h3>Vehicles (fetched):</h3>
+    <div id="vehicles-area"><em>loading…</em></div>
 
-    async function loadDrivers() {
-      const driverList = document.getElementById("driver-list")
+    <h3>Raw debug (console also):</h3>
+    <pre id="debug">waiting...</pre>
+  </div>
 
-      try {
-        // fetch all rows
-        const { data, error } = await supabase
-          .from("drivers")
-          .select("id, name, phone")
+  <script>
+    // ---------- CONFIG: your Supabase keys ----------
+    const SUPABASE_URL = "https://sfvoptdderulwrpdywmb.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmdm9wdGRkZXJ1bHdycGR5d21iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxNzY4NjAsImV4cCI6MjA3Mzc1Mjg2MH0.bHy_aZ9TOGLfanG6-xNb3HykxwpWAiUNOcfBbvN-OME";
+    // ------------------------------------------------
 
-        if (error) {
-          console.error(error)
-          driverList.innerHTML = "❌ Error fetching drivers"
-          return
+    const dbg = (k,v) => {
+      console.log(k, v);
+      const pre = document.getElementById('debug');
+      pre.textContent += `\n${k}: ${typeof v === 'object' ? JSON.stringify(v,null,2) : v}`;
+    };
+
+    try {
+      const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+      document.getElementById('status-text').textContent = 'fetching drivers + vehicles…';
+
+      (async function fetchAll() {
+        // Drivers
+        const { data: drivers, error: driversError } = await supabase
+          .from('drivers')
+          .select('id, name, phone')
+          .limit(100);
+        dbg('driversError', driversError);
+        dbg('drivers', drivers);
+
+        const driversArea = document.getElementById('drivers-area');
+        driversArea.innerHTML = '';
+        if (driversError) {
+          driversArea.innerHTML = `<div class="err">Error loading drivers: ${driversError.message || driversError.code || driversError}</div>`;
+        } else if (!drivers || drivers.length === 0) {
+          driversArea.innerHTML = `<div class="err">No drivers found (empty array)</div>`;
+        } else {
+          drivers.forEach(d => {
+            const el = document.createElement('div');
+            el.innerHTML = `<b>${d.name || '—'}</b> ${d.phone ? '('+d.phone+')' : ''} <small style="color:#666">id: ${d.id}</small>`;
+            driversArea.appendChild(el);
+          });
         }
 
-        if (!data || data.length === 0) {
-          driverList.innerHTML = "⚠️ No drivers found in Supabase"
-          return
+        // Vehicles (try multiple possible column names)
+        const { data: vehicles, error: vehiclesError } = await supabase
+          .from('vehicles')
+          .select('id, reg_number, registration')
+          .limit(100);
+        dbg('vehiclesError', vehiclesError);
+        dbg('vehicles', vehicles);
+
+        const vehiclesArea = document.getElementById('vehicles-area');
+        vehiclesArea.innerHTML = '';
+        if (vehiclesError) {
+          vehiclesArea.innerHTML = `<div class="err">Error loading vehicles: ${vehiclesError.message || vehiclesError.code || vehiclesError}</div>`;
+        } else if (!vehicles || vehicles.length === 0) {
+          vehiclesArea.innerHTML = `<div class="err">No vehicles found (empty array)</div>`;
+        } else {
+          vehicles.forEach(v => {
+            const label = v.reg_number || v.registration || 'unknown';
+            const el = document.createElement('div');
+            el.innerHTML = `<b>${label}</b> <small style="color:#666">id: ${v.id}</small>`;
+            vehiclesArea.appendChild(el);
+          });
         }
 
-        // show drivers
-        driverList.innerHTML = data.map(d =>
-          `<p><b>${d.name}</b> (${d.phone}) - ID: ${d.id}</p>`
-        ).join("")
-      } catch (err) {
-        console.error(err)
-        driverList.innerHTML = "❌ Unexpected error"
-      }
+        document.getElementById('status-text').textContent = 'done';
+      })();
+
+    } catch (err) {
+      dbg('init error', err);
+      document.getElementById('status-text').textContent = 'init error';
+      document.getElementById('drivers-area').innerHTML = `<div class="err">Initialization error — check console</div>`;
     }
-
-    loadDrivers()
   </script>
 </body>
 </html>
