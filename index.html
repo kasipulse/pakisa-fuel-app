@@ -1,122 +1,89 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pakisa Fuel Voucher — Live Fetch</title>
-<script src="https://unpkg.com/@supabase/supabase-js"></script>
-<style>
-  body { font-family: Arial; padding:24px; background:#f5f6f8; }
-  h1 { color:#072760; }
-  form { background:#fff; padding:20px; border-radius:8px; max-width:400px; box-shadow:0 4px 12px rgba(0,0,0,0.05); }
-  label { display:block; margin-top:10px; font-weight:bold; }
-  input, button { width:100%; padding:8px; margin-top:5px; }
-  button { background:#0F99DA; color:white; border:none; cursor:pointer; margin-top:15px; }
-  button:hover { background:#072760; }
-  #status { margin-top:15px; font-weight:bold; }
-  #driversList, #vehiclesList { margin-top:10px; padding:10px; background:#eef; border-radius:6px; max-height:150px; overflow:auto; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pakisa Fuel Voucher</title>
+  <script src="https://unpkg.com/@supabase/supabase-js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 24px; background: #f5f6f8; }
+    h1 { color: #072760; }
+    .card { background:white; padding:20px; border-radius:8px; max-width:500px; margin-bottom:20px; box-shadow:0 4px 12px rgba(0,0,0,0.05); }
+    button { background: #0F99DA; color:white; border:none; cursor:pointer; padding:10px 15px; margin-top:10px; }
+    button:hover { background:#072760; }
+    pre { background:#f0f3f6; padding:10px; border-radius:6px; white-space:pre-wrap; word-break:break-word; }
+  </style>
 </head>
 <body>
+  <h1>Pakisa Fuel Voucher Auto</h1>
 
-<h1>Pakisa Fuel Voucher</h1>
+  <div id="drivers-card" class="card">
+    <h2>Drivers</h2>
+    <pre id="drivers-output">Loading drivers…</pre>
+  </div>
 
-<form id="voucherForm">
-  <label for="driverId">Driver ID:</label>
-  <input type="text" id="driverId" placeholder="Enter Driver ID" required>
-  <div id="driversList"><em>Loading drivers…</em></div>
+  <div id="vehicles-card" class="card">
+    <h2>Vehicles</h2>
+    <pre id="vehicles-output">Loading vehicles…</pre>
+  </div>
 
-  <label for="vehicleId">Vehicle ID:</label>
-  <input type="text" id="vehicleId" placeholder="Enter Vehicle ID" required>
-  <div id="vehiclesList"><em>Loading vehicles…</em></div>
+  <div id="voucher-card" class="card">
+    <h2>Send Voucher</h2>
+    <button id="send-voucher">Send Fuel Voucher to All</button>
+    <pre id="voucher-status"></pre>
+  </div>
 
-  <label for="amount">Fuel Amount (R):</label>
-  <input type="number" id="amount" required min="50">
+  <script>
+    // ---------- CONFIG ----------
+    const SUPABASE_URL = "https://sfvoptdderulwrpdywmb.supabase.co";
+    const SUPABASE_SERVICE_KEY = "YOUR_SERVICE_ROLE_KEY_HERE"; // must be service role key
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
-  <button type="submit">Send Voucher</button>
-</form>
+    let drivers = [];
+    let vehicles = [];
 
-<p id="status"></p>
+    async function fetchData() {
+      // Fetch drivers via RPC
+      const { data: drv, error: drvErr } = await supabase.rpc('get_all_drivers');
+      if(drvErr) {
+        document.getElementById('drivers-output').textContent = '❌ Error: ' + drvErr.message;
+      } else {
+        drivers = drv;
+        document.getElementById('drivers-output').textContent = JSON.stringify(drivers, null, 2);
+      }
 
-<script>
-const SUPABASE_URL = "https://sfvoptdderulwrpdywmb.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmdm9wdGRkZXJ1bHdycGR5d21iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxNzY4NjAsImV4cCI6MjA3Mzc1Mjg2MH0.bHy_aZ9TOGLfanG6-xNb3HykxwpWAiUNOcfBbvN-OME";
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      // Fetch vehicles via RPC
+      const { data: veh, error: vehErr } = await supabase.rpc('get_all_vehicles');
+      if(vehErr) {
+        document.getElementById('vehicles-output').textContent = '❌ Error: ' + vehErr.message;
+      } else {
+        vehicles = veh;
+        document.getElementById('vehicles-output').textContent = JSON.stringify(vehicles, null, 2);
+      }
+    }
 
-let driversCache = {};
-let vehiclesCache = {};
+    document.getElementById('send-voucher').addEventListener('click', async () => {
+      if(drivers.length === 0 || vehicles.length === 0){
+        document.getElementById('voucher-status').textContent = '❌ No drivers or vehicles loaded';
+        return;
+      }
 
-// Fetch drivers and vehicles
-async function fetchData() {
-  // Drivers
-  const { data: drivers, error: driversError } = await supabase.from('drivers').select('id, name, phone');
-  const driversDiv = document.getElementById('driversList');
-  driversDiv.innerHTML = '';
-  if (driversError) {
-    driversDiv.innerHTML = `<span style="color:red">Error fetching drivers</span>`;
-    console.error(driversError);
-  } else if (!drivers || drivers.length === 0) {
-    driversDiv.innerHTML = `<em>No drivers found</em>`;
-  } else {
-    drivers.forEach(d => {
-      driversCache[d.id] = d.phone;
-      const el = document.createElement('div');
-      el.textContent = `${d.id} — ${d.name} (${d.phone})`;
-      driversDiv.appendChild(el);
+      const voucherAmount = 100; // fixed amount or random logic
+      const results = [];
+
+      for(const d of drivers){
+        for(const v of vehicles){
+          const { error } = await supabase.from('fuel_vouchers').insert([
+            { driver_id: d.id, vehicle_id: v.id, amount_rand: voucherAmount }
+          ]);
+          results.push({ driver:d.name, vehicle:v.registration || v.reg_number, error });
+        }
+      }
+
+      document.getElementById('voucher-status').textContent = JSON.stringify(results, null, 2);
     });
-  }
 
-  // Vehicles
-  const { data: vehicles, error: vehiclesError } = await supabase.from('vehicles').select('id, registration, reg_number');
-  const vehiclesDiv = document.getElementById('vehiclesList');
-  vehiclesDiv.innerHTML = '';
-  if (vehiclesError) {
-    vehiclesDiv.innerHTML = `<span style="color:red">Error fetching vehicles</span>`;
-    console.error(vehiclesError);
-  } else if (!vehicles || vehicles.length === 0) {
-    vehiclesDiv.innerHTML = `<em>No vehicles found</em>`;
-  } else {
-    vehicles.forEach(v => {
-      vehiclesCache[v.id] = v.registration || v.reg_number;
-      const el = document.createElement('div');
-      el.textContent = `${v.id} — ${v.registration || v.reg_number}`;
-      vehiclesDiv.appendChild(el);
-    });
-  }
-}
-
-fetchData();
-
-// Form submit
-document.getElementById('voucherForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const driverId = document.getElementById('driverId').value.trim();
-  const vehicleId = document.getElementById('vehicleId').value.trim();
-  const amount = parseFloat(document.getElementById('amount').value);
-
-  if (!driversCache[driverId]) {
-    document.getElementById('status').innerText = "Driver ID not found";
-    return;
-  }
-  if (!vehiclesCache[vehicleId]) {
-    document.getElementById('status').innerText = "Vehicle ID not found";
-    return;
-  }
-
-  const { error } = await supabase.from('fuel_vouchers').insert([
-    { driver_id: driverId, vehicle_id: vehicleId, amount_rand: amount }
-  ]);
-
-  if (error) {
-    document.getElementById('status').innerText = "❌ Error inserting voucher";
-    console.error(error);
-    return;
-  }
-
-  document.getElementById('status').innerText = "✅ Voucher created!";
-  document.getElementById('voucherForm').reset();
-});
-</script>
-
+    fetchData();
+  </script>
 </body>
 </html>
