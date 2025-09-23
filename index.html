@@ -1,69 +1,102 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Pakisa Fuel Voucher</title>
-  <script src="https://unpkg.com/@supabase/supabase-js"></script>
-  <style>
-    body { font-family: Arial, sans-serif; padding: 24px; background: #f5f6f8; }
-    h1 { color: #072760; }
-    form { background: #fff; padding: 20px; border-radius: 8px; max-width: 400px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-    label { display:block; margin-top:10px; font-weight:bold; }
-    input, button { width:100%; padding:8px; margin-top:5px; }
-    button { background: #0F99DA; color:white; border:none; cursor:pointer; margin-top:15px; }
-    button:hover { background: #072760; }
-    #status { margin-top:15px; font-weight:bold; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pakisa Fuel Voucher — Simple Input</title>
+<script src="https://unpkg.com/@supabase/supabase-js"></script>
+<style>
+  body { font-family: Arial, sans-serif; padding: 24px; background:#f5f6f8; }
+  h1 { color:#072760; }
+  form { background:#fff; padding:20px; border-radius:8px; max-width:400px; box-shadow:0 4px 12px rgba(0,0,0,0.05); }
+  label { display:block; margin-top:10px; font-weight:bold; }
+  input, button { width:100%; padding:8px; margin-top:5px; }
+  button { background:#0F99DA; color:white; border:none; cursor:pointer; margin-top:15px; }
+  button:hover { background:#072760; }
+  #status { margin-top:15px; font-weight:bold; }
+</style>
 </head>
 <body>
-  <h1>Pakisa Fuel Voucher</h1>
+<h1>Pakisa Fuel Voucher — Simple Input</h1>
 
-  <form id="voucherForm">
-    <label for="driver">Driver ID:</label>
-    <input type="text" id="driver" placeholder="Enter driver ID" required>
+<form id="voucherForm">
+  <label for="driverId">Driver ID:</label>
+  <input type="text" id="driverId" placeholder="Enter Driver ID" required>
 
-    <label for="vehicle">Vehicle ID:</label>
-    <input type="text" id="vehicle" placeholder="Enter vehicle ID" required>
+  <label for="vehicleId">Vehicle ID:</label>
+  <input type="text" id="vehicleId" placeholder="Enter Vehicle ID" required>
 
-    <label for="amount">Fuel Amount (R):</label>
-    <input type="number" id="amount" placeholder="Enter amount" required min="50">
+  <label for="amount">Fuel Amount (R):</label>
+  <input type="number" id="amount" required min="50">
 
-    <button type="submit">Send Voucher</button>
-  </form>
+  <button type="submit">Send Voucher</button>
+</form>
 
-  <p id="status"></p>
+<p id="status"></p>
 
-  <script>
-    const SUPABASE_URL = "https://sfvoptdderulwrpdywmb.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmdm9wdGRkZXJ1bHdycGR5d21iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxNzY4NjAsImV4cCI6MjA3Mzc1Mjg2MH0.bHy_aZ9TOGLfanG6-xNb3HykxwpWAiUNOcfBbvN-OME";
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+<script>
+const SUPABASE_URL = "https://sfvoptdderulwrpdywmb.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmdm9wdGRkZXJ1bHdycGR5d21iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxNzY4NjAsImV4cCI6MjA3Mzc1Mjg2MH0.bHy_aZ9TOGLfanG6-xNb3HykxwpWAiUNOcfBbvN-OME";
+const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    document.getElementById("voucherForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
+let driversCache = {};
 
-      const driver = document.getElementById("driver").value.trim();
-      const vehicle = document.getElementById("vehicle").value.trim();
-      const amount = parseFloat(document.getElementById("amount").value);
+// Fetch driver data once
+async function loadDrivers() {
+  const { data, error } = await supabase.from('drivers').select('id, phone');
+  if (error) {
+    console.error("Error fetching drivers:", error);
+    document.getElementById('status').innerText = "❌ Error loading drivers";
+    return;
+  }
+  data.forEach(d => {
+    driversCache[d.id] = d.phone;
+  });
+}
 
-      if (!driver || !vehicle || !amount) {
-        document.getElementById("status").innerText = "Please fill all fields.";
-        return;
-      }
+loadDrivers();
 
-      // Insert into fuel_vouchers using amount_rand
-      const { error } = await supabase.from("fuel_vouchers").insert([
-        { driver_id: driver, vehicle_id: vehicle, amount_rand: amount }
-      ]);
+document.getElementById('voucherForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const driverId = document.getElementById('driverId').value.trim();
+  const vehicleId = document.getElementById('vehicleId').value.trim();
+  const amount = parseFloat(document.getElementById('amount').value);
 
-      if (error) {
-        document.getElementById("status").innerText = "❌ Error: " + error.message;
-        console.error(error);
-      } else {
-        document.getElementById("status").innerText = `✅ Voucher created successfully for driver ${driver}!`;
-        document.getElementById("voucherForm").reset();
-      }
-    });
-  </script>
+  if (!driverId || !vehicleId || !amount) {
+    document.getElementById('status').innerText = "Please fill all fields";
+    return;
+  }
+
+  const phone = driversCache[driverId];
+  if (!phone) {
+    document.getElementById('status').innerText = "Driver ID not found in system";
+    return;
+  }
+
+  // Insert into fuel_vouchers table
+  const { error } = await supabase.from('fuel_vouchers').insert([
+    { driver_id: driverId, vehicle_id: vehicleId, amount_rand: amount }
+  ]);
+
+  if (error) {
+    console.error(error);
+    document.getElementById('status').innerText = "❌ Error inserting voucher";
+    return;
+  }
+
+  // Send SMS via your function
+  await fetch(`${SUPABASE_URL}/functions/v1/send_sms_voucher`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${SUPABASE_ANON_KEY}`
+    },
+    body: JSON.stringify({ phone, message: `Pakisa Fuel Voucher: R${amount} approved.` })
+  });
+
+  document.getElementById('status').innerText = "✅ Voucher created and SMS sent!";
+  document.getElementById('voucherForm').reset();
+});
+</script>
 </body>
 </html>
