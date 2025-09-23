@@ -1,34 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Pakisa Fuel Voucher</title>
   <script src="https://unpkg.com/@supabase/supabase-js"></script>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 24px;
-      background: #f5f6f8;
-    }
+    body { font-family: Arial, sans-serif; padding: 24px; background:#f5f6f8; }
     h1 { color: #072760; }
-    form {
-      background: #fff;
-      padding: 20px;
-      border-radius: 8px;
-      max-width: 400px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-    }
+    form { background:#fff; padding:20px; border-radius:8px; max-width:400px; box-shadow:0 4px 12px rgba(0,0,0,0.05); }
     label { display:block; margin-top:10px; font-weight:bold; }
     select, input, button { width:100%; padding:8px; margin-top:5px; }
-    button {
-      background: #0F99DA;
-      color:white;
-      border:none;
-      cursor:pointer;
-      margin-top:15px;
-    }
-    button:hover { background: #072760; }
+    button { background:#0F99DA; color:white; border:none; cursor:pointer; margin-top:15px; }
+    button:hover { background:#072760; }
     #status { margin-top:15px; font-weight:bold; }
   </style>
 </head>
@@ -62,39 +46,34 @@
 
     // ----------------- LOAD DROPDOWNS -----------------
     async function loadDriversAndVehicles() {
-      try {
-        // Drivers
-        const { data: drivers, error: driversError } = await supabase.from("drivers").select("*");
-        const driverSelect = document.getElementById("driver");
-        driverSelect.innerHTML = "";
-        if (driversError || !drivers || drivers.length === 0) {
-          driverSelect.innerHTML = `<option value="">⚠️ No drivers found</option>`;
-        } else {
-          drivers.forEach(d => {
-            const option = document.createElement("option");
-            option.value = d.id;
-            option.textContent = `${d.name} (${d.phone})`;
-            driverSelect.appendChild(option);
-          });
-        }
+      // Drivers
+      const { data: drivers, error: driversError } = await supabase.from("drivers").select("*");
+      const driverSelect = document.getElementById("driver");
+      driverSelect.innerHTML = "";
+      if (driversError || !drivers || drivers.length === 0) {
+        driverSelect.innerHTML = `<option value="">⚠️ No drivers found</option>`;
+      } else {
+        drivers.forEach(d => {
+          const option = document.createElement("option");
+          option.value = d.id;
+          option.textContent = `${d.name} (${d.phone})`;
+          driverSelect.appendChild(option);
+        });
+      }
 
-        // Vehicles
-        const { data: vehicles, error: vehiclesError } = await supabase.from("vehicles").select("*");
-        const vehicleSelect = document.getElementById("vehicle");
-        vehicleSelect.innerHTML = "";
-        if (vehiclesError || !vehicles || vehicles.length === 0) {
-          vehicleSelect.innerHTML = `<option value="">⚠️ No vehicles found</option>`;
-        } else {
-          vehicles.forEach(v => {
-            const option = document.createElement("option");
-            option.value = v.id;
-            option.textContent = v.registration || v.reg_number;
-            vehicleSelect.appendChild(option);
-          });
-        }
-      } catch (err) {
-        console.error("Error loading drivers/vehicles:", err);
-        document.getElementById("status").innerText = "❌ Error loading data";
+      // Vehicles
+      const { data: vehicles, error: vehiclesError } = await supabase.from("vehicles").select("*");
+      const vehicleSelect = document.getElementById("vehicle");
+      vehicleSelect.innerHTML = "";
+      if (vehiclesError || !vehicles || vehicles.length === 0) {
+        vehicleSelect.innerHTML = `<option value="">⚠️ No vehicles found</option>`;
+      } else {
+        vehicles.forEach(v => {
+          const option = document.createElement("option");
+          option.value = v.id;
+          option.textContent = v.registration || v.reg_number;
+          vehicleSelect.appendChild(option);
+        });
       }
     }
 
@@ -110,44 +89,24 @@
         return;
       }
 
-      try {
-        // Insert into fuel_vouchers (amount_rand column)
-        const { error } = await supabase.from("fuel_vouchers").insert([
-          { driver_id: driver, vehicle_id: vehicle, amount_rand: amount }
-        ]);
+      // Insert into fuel_vouchers
+      const { error } = await supabase.from("fuel_vouchers").insert([
+        { driver_id: driver, vehicle_id: vehicle, amount_rand: amount }
+      ]);
 
-        if (error) {
-          document.getElementById("status").innerText = "❌ Error: " + error.message;
-          console.error(error);
-          return;
-        }
-
-        document.getElementById("status").innerText = "✅ Voucher created successfully!";
-
-        // Optional: send SMS via Supabase Edge Function
-        const driverObj = (await supabase.from("drivers").select("*").eq("id", driver).single()).data;
-        if (driverObj?.phone) {
-          const smsMessage = `Pakisa Fuel Voucher: R${amount} approved for your vehicle.`;
-          await fetch(`${SUPABASE_URL}/functions/v1/send_sms_voucher`, {
-            method: "POST",
-            headers: { 
-              "Content-Type": "application/json", 
-              "Authorization": `Bearer ${SUPABASE_ANON_KEY}` 
-            },
-            body: JSON.stringify({ phone: driverObj.phone, message: smsMessage })
-          });
-        }
-
-        // Reset form
-        document.getElementById("voucherForm").reset();
-        loadDriversAndVehicles();
-
-      } catch (err) {
-        console.error("Error submitting voucher:", err);
-        document.getElementById("status").innerText = "❌ Error submitting voucher";
+      if (error) {
+        document.getElementById("status").innerText = "❌ Error: " + error.message;
+        console.error(error);
+        return;
       }
+
+      document.getElementById("status").innerText = "✅ Voucher created successfully!";
+
+      // Reset form
+      document.getElementById("voucherForm").reset();
     });
 
+    // Load dropdowns on page load
     loadDriversAndVehicles();
   </script>
 </body>
