@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pakisa Fuel Voucher</title>
   <script src="https://unpkg.com/@supabase/supabase-js"></script>
   <style>
-    body { font-family: Arial, sans-serif; padding: 24px; background:#f5f6f8; }
-    h1 { color: #072760; }
+    body { font-family: Arial, sans-serif; padding:24px; background:#f5f6f8; }
+    h1 { color:#072760; }
     form { background:#fff; padding:20px; border-radius:8px; max-width:400px; box-shadow:0 4px 12px rgba(0,0,0,0.05); }
     label { display:block; margin-top:10px; font-weight:bold; }
     select, input, button { width:100%; padding:8px; margin-top:5px; }
@@ -18,7 +18,6 @@
 </head>
 <body>
   <h1>Pakisa Fuel Voucher</h1>
-
   <form id="voucherForm">
     <label for="driver">Driver:</label>
     <select id="driver" required>
@@ -39,37 +38,35 @@
   <p id="status"></p>
 
   <script>
-    // ----------------- SUPABASE CONFIG -----------------
     const SUPABASE_URL = "https://sfvoptdderulwrpdywmb.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmdm9wdGRkZXJ1bHdycGR5d21iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxNzY4NjAsImV4cCI6MjA3Mzc1Mjg2MH0.bHy_aZ9TOGLfanG6-xNb3HykxwpWAiUNOcfBbvN-OME";
     const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // ----------------- LOAD DROPDOWNS -----------------
     async function loadDriversAndVehicles() {
-      // Drivers
-      const { data: drivers, error: driversError } = await supabase.from("drivers").select("*");
-      const driverSelect = document.getElementById("driver");
-      driverSelect.innerHTML = "";
-      if (driversError || !drivers || drivers.length === 0) {
+      // Load drivers
+      const { data: drivers, error: dError } = await supabase.from('drivers').select('*');
+      const driverSelect = document.getElementById('driver');
+      driverSelect.innerHTML = '';
+      if (dError || !drivers || drivers.length===0) {
         driverSelect.innerHTML = `<option value="">⚠️ No drivers found</option>`;
       } else {
         drivers.forEach(d => {
-          const option = document.createElement("option");
+          const option = document.createElement('option');
           option.value = d.id;
           option.textContent = `${d.name} (${d.phone})`;
           driverSelect.appendChild(option);
         });
       }
 
-      // Vehicles
-      const { data: vehicles, error: vehiclesError } = await supabase.from("vehicles").select("*");
-      const vehicleSelect = document.getElementById("vehicle");
-      vehicleSelect.innerHTML = "";
-      if (vehiclesError || !vehicles || vehicles.length === 0) {
+      // Load vehicles
+      const { data: vehicles, error: vError } = await supabase.from('vehicles').select('*');
+      const vehicleSelect = document.getElementById('vehicle');
+      vehicleSelect.innerHTML = '';
+      if (vError || !vehicles || vehicles.length===0) {
         vehicleSelect.innerHTML = `<option value="">⚠️ No vehicles found</option>`;
       } else {
         vehicles.forEach(v => {
-          const option = document.createElement("option");
+          const option = document.createElement('option');
           option.value = v.id;
           option.textContent = v.registration || v.reg_number;
           vehicleSelect.appendChild(option);
@@ -77,36 +74,26 @@
       }
     }
 
-    // ----------------- FORM SUBMIT -----------------
-    document.getElementById("voucherForm").addEventListener("submit", async (e) => {
+    document.getElementById('voucherForm').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const driver = document.getElementById("driver").value;
-      const vehicle = document.getElementById("vehicle").value;
-      const amount = parseFloat(document.getElementById("amount").value);
-
+      const driver = document.getElementById('driver').value;
+      const vehicle = document.getElementById('vehicle').value;
+      const amount = parseFloat(document.getElementById('amount').value);
       if (!driver || !vehicle || !amount) {
-        document.getElementById("status").innerText = "Please fill all fields.";
+        document.getElementById('status').innerText = 'Please fill all fields.';
         return;
       }
 
-      // Insert into fuel_vouchers
-      const { error } = await supabase.from("fuel_vouchers").insert([
-        { driver_id: driver, vehicle_id: vehicle, amount_rand: amount }
-      ]);
-
+      const { error } = await supabase.from('fuel_vouchers').insert([{ driver_id: driver, vehicle_id: vehicle, amount_rand: amount }]);
       if (error) {
-        document.getElementById("status").innerText = "❌ Error: " + error.message;
+        document.getElementById('status').innerText = '❌ Error: ' + error.message;
         console.error(error);
         return;
       }
-
-      document.getElementById("status").innerText = "✅ Voucher created successfully!";
-
-      // Reset form
-      document.getElementById("voucherForm").reset();
+      document.getElementById('status').innerText = '✅ Voucher created successfully!';
+      document.getElementById('voucherForm').reset();
     });
 
-    // Load dropdowns on page load
     loadDriversAndVehicles();
   </script>
 </body>
