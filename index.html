@@ -39,18 +39,17 @@
   <p id="status"></p>
 
   <script>
+    // Supabase config
     const SUPABASE_URL = "https://sfvoptdderulwrpdywmb.supabase.co";
-    const SUPABASE_ANON_KEY = "YOUR_SERVICE_ROLE_KEY"; // use service_role key
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmdm9wdGRkZXJ1bHdycGR5d21iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxNzY4NjAsImV4cCI6MjA3Mzc1Mjg2MH0.bHy_aZ9TOGLfanG6-xNb3HykxwpWAiUNOcfBbvN-OME";
     const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     async function loadDriversAndVehicles() {
+      // Load drivers
+      const { data: drivers, error: driversError } = await supabase.from("drivers").select("*");
       const driverSelect = document.getElementById("driver");
-      const vehicleSelect = document.getElementById("vehicle");
-
-      // Fetch drivers
-      const { data: drivers, error: driverError } = await supabase.from("drivers").select("*");
       driverSelect.innerHTML = "";
-      if (driverError || !drivers || drivers.length === 0) {
+      if (driversError || !drivers || drivers.length === 0) {
         driverSelect.innerHTML = `<option value="">⚠️ No drivers found</option>`;
       } else {
         drivers.forEach(d => {
@@ -61,10 +60,11 @@
         });
       }
 
-      // Fetch vehicles
-      const { data: vehicles, error: vehicleError } = await supabase.from("vehicles").select("*");
+      // Load vehicles
+      const { data: vehicles, error: vehiclesError } = await supabase.from("vehicles").select("*");
+      const vehicleSelect = document.getElementById("vehicle");
       vehicleSelect.innerHTML = "";
-      if (vehicleError || !vehicles || vehicles.length === 0) {
+      if (vehiclesError || !vehicles || vehicles.length === 0) {
         vehicleSelect.innerHTML = `<option value="">⚠️ No vehicles found</option>`;
       } else {
         vehicles.forEach(v => {
