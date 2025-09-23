@@ -39,13 +39,14 @@
   <p id="status"></p>
 
   <script>
-    // Supabase config
+    // ----------------- SUPABASE CONFIG -----------------
     const SUPABASE_URL = "https://sfvoptdderulwrpdywmb.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmdm9wdGRkZXJ1bHdycGR5d21iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxNzY4NjAsImV4cCI6MjA3Mzc1Mjg2MH0.bHy_aZ9TOGLfanG6-xNb3HykxwpWAiUNOcfBbvN-OME";
     const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+    // ----------------- LOAD DROPDOWNS -----------------
     async function loadDriversAndVehicles() {
-      // Load drivers
+      // Fetch drivers
       const { data: drivers, error: driversError } = await supabase.from("drivers").select("*");
       const driverSelect = document.getElementById("driver");
       driverSelect.innerHTML = "";
@@ -60,7 +61,7 @@
         });
       }
 
-      // Load vehicles
+      // Fetch vehicles
       const { data: vehicles, error: vehiclesError } = await supabase.from("vehicles").select("*");
       const vehicleSelect = document.getElementById("vehicle");
       vehicleSelect.innerHTML = "";
@@ -70,12 +71,13 @@
         vehicles.forEach(v => {
           const option = document.createElement("option");
           option.value = v.id;
-          option.textContent = v.registration;
+          option.textContent = v.registration || v.reg_number;
           vehicleSelect.appendChild(option);
         });
       }
     }
 
+    // ----------------- FORM SUBMIT -----------------
     document.getElementById("voucherForm").addEventListener("submit", async (e) => {
       e.preventDefault();
       const driver = document.getElementById("driver").value;
@@ -87,18 +89,22 @@
         return;
       }
 
+      // Insert voucher
       const { error } = await supabase.from("fuel_vouchers").insert([
         { driver_id: driver, vehicle_id: vehicle, amount_rand: amount }
       ]);
 
       if (error) {
         document.getElementById("status").innerText = "❌ Error: " + error.message;
-      } else {
-        document.getElementById("status").innerText = "✅ Voucher created successfully!";
-        document.getElementById("voucherForm").reset();
+        console.error(error);
+        return;
       }
+
+      document.getElementById("status").innerText = "✅ Voucher created successfully!";
+      document.getElementById("voucherForm").reset();
     });
 
+    // Load data immediately
     loadDriversAndVehicles();
   </script>
 </body>
