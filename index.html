@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pakisa Fuel Voucher — Simple Input</title>
+<title>Pakisa Fuel Voucher — Live Fetch</title>
 <script src="https://unpkg.com/@supabase/supabase-js"></script>
 <style>
-  body { font-family: Arial, sans-serif; padding: 24px; background:#f5f6f8; }
+  body { font-family: Arial; padding:24px; background:#f5f6f8; }
   h1 { color:#072760; }
   form { background:#fff; padding:20px; border-radius:8px; max-width:400px; box-shadow:0 4px 12px rgba(0,0,0,0.05); }
   label { display:block; margin-top:10px; font-weight:bold; }
@@ -14,17 +14,21 @@
   button { background:#0F99DA; color:white; border:none; cursor:pointer; margin-top:15px; }
   button:hover { background:#072760; }
   #status { margin-top:15px; font-weight:bold; }
+  #driversList, #vehiclesList { margin-top:10px; padding:10px; background:#eef; border-radius:6px; max-height:150px; overflow:auto; }
 </style>
 </head>
 <body>
-<h1>Pakisa Fuel Voucher — Simple Input</h1>
+
+<h1>Pakisa Fuel Voucher</h1>
 
 <form id="voucherForm">
   <label for="driverId">Driver ID:</label>
   <input type="text" id="driverId" placeholder="Enter Driver ID" required>
+  <div id="driversList"><em>Loading drivers…</em></div>
 
   <label for="vehicleId">Vehicle ID:</label>
   <input type="text" id="vehicleId" placeholder="Enter Vehicle ID" required>
+  <div id="vehiclesList"><em>Loading vehicles…</em></div>
 
   <label for="amount">Fuel Amount (R):</label>
   <input type="number" id="amount" required min="50">
@@ -40,63 +44,79 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let driversCache = {};
+let vehiclesCache = {};
 
-// Fetch driver data once
-async function loadDrivers() {
-  const { data, error } = await supabase.from('drivers').select('id, phone');
-  if (error) {
-    console.error("Error fetching drivers:", error);
-    document.getElementById('status').innerText = "❌ Error loading drivers";
-    return;
+// Fetch drivers and vehicles
+async function fetchData() {
+  // Drivers
+  const { data: drivers, error: driversError } = await supabase.from('drivers').select('id, name, phone');
+  const driversDiv = document.getElementById('driversList');
+  driversDiv.innerHTML = '';
+  if (driversError) {
+    driversDiv.innerHTML = `<span style="color:red">Error fetching drivers</span>`;
+    console.error(driversError);
+  } else if (!drivers || drivers.length === 0) {
+    driversDiv.innerHTML = `<em>No drivers found</em>`;
+  } else {
+    drivers.forEach(d => {
+      driversCache[d.id] = d.phone;
+      const el = document.createElement('div');
+      el.textContent = `${d.id} — ${d.name} (${d.phone})`;
+      driversDiv.appendChild(el);
+    });
   }
-  data.forEach(d => {
-    driversCache[d.id] = d.phone;
-  });
+
+  // Vehicles
+  const { data: vehicles, error: vehiclesError } = await supabase.from('vehicles').select('id, registration, reg_number');
+  const vehiclesDiv = document.getElementById('vehiclesList');
+  vehiclesDiv.innerHTML = '';
+  if (vehiclesError) {
+    vehiclesDiv.innerHTML = `<span style="color:red">Error fetching vehicles</span>`;
+    console.error(vehiclesError);
+  } else if (!vehicles || vehicles.length === 0) {
+    vehiclesDiv.innerHTML = `<em>No vehicles found</em>`;
+  } else {
+    vehicles.forEach(v => {
+      vehiclesCache[v.id] = v.registration || v.reg_number;
+      const el = document.createElement('div');
+      el.textContent = `${v.id} — ${v.registration || v.reg_number}`;
+      vehiclesDiv.appendChild(el);
+    });
+  }
 }
 
-loadDrivers();
+fetchData();
 
+// Form submit
 document.getElementById('voucherForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const driverId = document.getElementById('driverId').value.trim();
   const vehicleId = document.getElementById('vehicleId').value.trim();
   const amount = parseFloat(document.getElementById('amount').value);
 
-  if (!driverId || !vehicleId || !amount) {
-    document.getElementById('status').innerText = "Please fill all fields";
+  if (!driversCache[driverId]) {
+    document.getElementById('status').innerText = "Driver ID not found";
+    return;
+  }
+  if (!vehiclesCache[vehicleId]) {
+    document.getElementById('status').innerText = "Vehicle ID not found";
     return;
   }
 
-  const phone = driversCache[driverId];
-  if (!phone) {
-    document.getElementById('status').innerText = "Driver ID not found in system";
-    return;
-  }
-
-  // Insert into fuel_vouchers table
   const { error } = await supabase.from('fuel_vouchers').insert([
     { driver_id: driverId, vehicle_id: vehicleId, amount_rand: amount }
   ]);
 
   if (error) {
-    console.error(error);
     document.getElementById('status').innerText = "❌ Error inserting voucher";
+    console.error(error);
     return;
   }
 
-  // Send SMS via your function
-  await fetch(`${SUPABASE_URL}/functions/v1/send_sms_voucher`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${SUPABASE_ANON_KEY}`
-    },
-    body: JSON.stringify({ phone, message: `Pakisa Fuel Voucher: R${amount} approved.` })
-  });
-
-  document.getElementById('status').innerText = "✅ Voucher created and SMS sent!";
+  document.getElementById('status').innerText = "✅ Voucher created!";
   document.getElementById('voucherForm').reset();
 });
 </script>
+
 </body>
 </html>
