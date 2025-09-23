@@ -71,15 +71,18 @@
   <p id="status"></p>
 
   <script>
-    // Supabase setup
+    // ✅ Replace with your actual Supabase keys
     const SUPABASE_URL = "https://sfvoptdderulwrpdywmb.supabase.co"; 
-    const SUPABASE_ANON_KEY = "PASTE_YOUR_REAL_ANON_KEY_HERE"; 
+    const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY"; 
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     async function loadDriversAndVehicles() {
-      // Load drivers
-      const { data: drivers, error: driversError } = await supabaseClient.from("drivers").select("*");
-      console.log("Drivers response:", drivers, driversError);
+      console.log("Fetching drivers...");
+      const { data: drivers, error: driversError } = await supabaseClient
+        .from("drivers")
+        .select("*");
+
+      console.log("Drivers:", drivers, "Error:", driversError);
 
       const driverSelect = document.getElementById("driver");
       driverSelect.innerHTML = ""; 
@@ -95,9 +98,12 @@
         });
       }
 
-      // Load vehicles
-      const { data: vehicles, error: vehiclesError } = await supabaseClient.from("vehicles").select("*");
-      console.log("Vehicles response:", vehicles, vehiclesError);
+      console.log("Fetching vehicles...");
+      const { data: vehicles, error: vehiclesError } = await supabaseClient
+        .from("vehicles")
+        .select("*");
+
+      console.log("Vehicles:", vehicles, "Error:", vehiclesError);
 
       const vehicleSelect = document.getElementById("vehicle");
       vehicleSelect.innerHTML = ""; 
@@ -108,7 +114,7 @@
         vehicles.forEach(v => {
           const option = document.createElement("option");
           option.value = v.id;
-          option.textContent = v.reg_number;
+          option.textContent = v.registration;
           vehicleSelect.appendChild(option);
         });
       }
@@ -126,7 +132,9 @@
         return;
       }
 
-      // ✅ Insert with amount_rand
+      console.log("Inserting voucher:", { driver, vehicle, amount });
+
+      // ✅ Insert using amount_rand
       const { error } = await supabaseClient.from("fuel_vouchers").insert([
         { driver_id: driver, vehicle_id: vehicle, amount_rand: amount }
       ]);
