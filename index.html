@@ -3,8 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pakisa Fuel Voucher - Debug</title>
-  <script src="https://unpkg.com/@supabase/supabase-js"></script>
+  <title>Pakisa Fuel Voucher</title>
   <style>
     body { font-family: Arial, sans-serif; padding: 24px; background: #f5f6f8; }
     h1 { color: #072760; }
@@ -16,7 +15,7 @@
   </style>
 </head>
 <body>
-  <h1>Pakisa Fuel Voucher - Debug</h1>
+  <h1>Pakisa Fuel Voucher</h1>
 
   <form id="voucherForm">
     <label for="driver">Driver:</label>
@@ -36,68 +35,67 @@
   </form>
 
   <p id="status"></p>
-
   <h3>Debug Info</h3>
   <pre id="debug"></pre>
 
-<script src="https://unpkg.com/@supabase/supabase-js"></script>
-<script>
-  const SUPABASE_URL = "https://sfvoptdderulwrpdywmb.supabase.co";
-  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmdm9wdGRkZXJ1bHdycGR5d21iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxNzY4NjAsImV4cCI6MjA3Mzc1Mjg2MH0.bHy_aZ9TOGLfanG6-xNb3HykxwpWAiUNOcfBbvN-OME";
-  
-  const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  
-  console.log("Supabase client created:", supabase);
-  alert("Supabase client loaded!");
-</script>
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, getDocs, addDoc, Timestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
+
+    // TODO: Replace with your Firebase config
+    const firebaseConfig = {
+      apiKey: "YOUR_KEY",
+      authDomain: "YOUR_PROJECT.firebaseapp.com",
+      projectId: "YOUR_PROJECT",
+      storageBucket: "YOUR_PROJECT.appspot.com",
+      messagingSenderId: "xxxx",
+      appId: "xxxx"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const functions = getFunctions(app);
+
+    const dbg = (label, val) => {
+      document.getElementById("debug").textContent += `\n${label}: ${JSON.stringify(val,null,2)}`;
+    };
 
     async function loadDriversAndVehicles() {
       try {
-        // Fetch drivers
-        dbg("Fetching drivers...", null);
-        const { data: drivers, error: driversError } = await supabase
-          .from("drivers")
-          .select("*")
-          .limit(10);
-        dbg("driversError", driversError);
-        dbg("drivers", drivers);
-
+        // Drivers
+        const driversSnap = await getDocs(collection(db, "drivers"));
         const driverSelect = document.getElementById("driver");
         driverSelect.innerHTML = "";
-        if (driversError || !drivers || drivers.length === 0) {
+        if (driversSnap.empty) {
           driverSelect.innerHTML = `<option value="">⚠️ No drivers found</option>`;
         } else {
-          drivers.forEach(d => {
+          driversSnap.forEach(doc => {
+            const d = doc.data();
             const option = document.createElement("option");
-            option.value = d.id;
+            option.value = doc.id;
             option.textContent = `${d.name} (${d.phone})`;
             driverSelect.appendChild(option);
           });
         }
 
-        // Fetch vehicles
-        dbg("Fetching vehicles...", null);
-        const { data: vehicles, error: vehiclesError } = await supabase
-          .from("vehicles")
-          .select("*")
-          .limit(10);
-        dbg("vehiclesError", vehiclesError);
-        dbg("vehicles", vehicles);
-
+        // Vehicles
+        const vehiclesSnap = await getDocs(collection(db, "vehicles"));
         const vehicleSelect = document.getElementById("vehicle");
         vehicleSelect.innerHTML = "";
-        if (vehiclesError || !vehicles || vehicles.length === 0) {
+        if (vehiclesSnap.empty) {
           vehicleSelect.innerHTML = `<option value="">⚠️ No vehicles found</option>`;
         } else {
-          vehicles.forEach(v => {
+          vehiclesSnap.forEach(doc => {
+            const v = doc.data();
             const option = document.createElement("option");
-            option.value = v.id;
+            option.value = doc.id;
             option.textContent = v.registration || v.reg_number;
             vehicleSelect.appendChild(option);
           });
         }
-
-      } catch (err) {
+      } catch(err) {
         dbg("loadDriversAndVehicles error", err);
         document.getElementById("status").innerText = "❌ Error loading data - check console";
       }
@@ -105,27 +103,34 @@
 
     document.getElementById("voucherForm").addEventListener("submit", async (e) => {
       e.preventDefault();
-      const driver = document.getElementById("driver").value;
-      const vehicle = document.getElementById("vehicle").value;
+      const driverId = document.getElementById("driver").value;
+      const vehicleId = document.getElementById("vehicle").value;
       const amount = parseFloat(document.getElementById("amount").value);
 
-      if (!driver || !vehicle || !amount) {
+      if (!driverId || !vehicleId || !amount) {
         document.getElementById("status").innerText = "Please fill all fields.";
         return;
       }
 
-      const { error } = await supabase.from("fuel_vouchers").insert([
-        { driver_id: driver, vehicle_id: vehicle, amount_rand: amount }
-      ]);
+      try {
+        // Save fuel voucher
+        await addDoc(collection(db, "fuel_vouchers"), {
+          driverId,
+          vehicleId,
+          amountRand: amount,
+          date: Timestamp.now()
+        });
 
-      if (error) {
-        document.getElementById("status").innerText = "❌ Error: " + error.message;
-        dbg("Insert error", error);
-        return;
+        // Optional: send SMS via Cloud Function
+        // const sendSMS = httpsCallable(functions, 'sendSMS');
+        // await sendSMS({ phone: driverPhone, message: `Fuel voucher R${amount} logged` });
+
+        document.getElementById("status").innerText = "✅ Voucher created successfully!";
+        document.getElementById("voucherForm").reset();
+      } catch(err) {
+        document.getElementById("status").innerText = "❌ Error: " + err.message;
+        dbg("Insert error", err);
       }
-
-      document.getElementById("status").innerText = "✅ Voucher created successfully!";
-      document.getElementById("voucherForm").reset();
     });
 
     loadDriversAndVehicles();
